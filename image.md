@@ -1,7 +1,6 @@
 import cv2
 import numpy as np
 
-# 開啟影片檔案
 cap = cv2.VideoCapture('E:\\4_1.mp4')
 
 if not cap.isOpened():
@@ -25,8 +24,7 @@ while True:
     sorted_contours = sorted(contours, key=cv2.contourArea, reverse=True)
     # 找到最大的轮廓
     max_contour = sorted_contours[1]
-    
-    
+
     # 選擇最大輪廓中的每一點
     all_points = np.concatenate(max_contour)
     # 根據 XY 的相加找到左上角
@@ -44,19 +42,21 @@ while True:
     # 根據 X-Y 的相加找到右上角
     right_top_index = np.argmin(np.diff(all_points, axis=1))
     right_top_point = tuple(all_points[right_top_index])
-    if not abs(left_top_point[0]-left_bottom_point[0])<10:
+    if not abs(left_top_point[0] - left_bottom_point[0]) < 10:
         continue
-    if not abs(right_top_point[0]-right_bottom_point[0])<10:
+    if not abs(right_top_point[0] - right_bottom_point[0]) < 10:
         continue
     # 透視變換矩陣
     paper_corners = np.float32([left_top_point, right_top_point, right_bottom_point, left_bottom_point])
     output_size = (226, 372)  # 新的目標尺寸
-    output_corners = np.array([[0, 0], [output_size[0] - 1, 0], [output_size[0] - 1, output_size[1] - 1], [0, output_size[1] - 1]], dtype=np.float32)
+    output_corners = np.array(
+        [[0, 0], [output_size[0] - 1, 0], [output_size[0] - 1, output_size[1] - 1], [0, output_size[1] - 1]],
+        dtype=np.float32)
     perspective_matrix = cv2.getPerspectiveTransform(paper_corners, output_corners)
 
     # 進行透視變換
     warped_frame = cv2.warpPerspective(frame, perspective_matrix, output_size)
-    
+
     # 使用霍夫變換檢測直線
     edges = cv2.Canny(warped_frame, 50, 150, apertureSize=3)
     lines = cv2.HoughLines(edges, 1, np.pi / 180, threshold=100)
@@ -74,33 +74,19 @@ while True:
             # 計算旋轉矩形的角度
             rotated_rect = cv2.minAreaRect(max_contour)
             rotated_rect_angle = rotated_rect[2]
-            if not(0 <= rotated_rect_angle <= 3):
+            if not (0 <= rotated_rect_angle <= 3):
                 continue  # 如果不是垂直線，跳過這一幀
-    
+
     top_left = (54, 156)
     bottom_right = (226, 372)
     original_image = warped_frame[top_left[1]:bottom_right[1], top_left[0]:bottom_right[0]]
     original_image = cv2.cvtColor(original_image, cv2.COLOR_BGR2GRAY)
-    _, binary_original_image = cv2.threshold(original_image, 127, 255, cv2.THRESH_BINARY)
-    binary_contours, _ = cv2.findContours(binary_original_image, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
-    symbol_count = 0    
-    for contour in binary_contours:
-    # 计算轮廓的面积
-        area = cv2.contourArea(contour)
-        L1wd = cv2.arcLength(contour,True)
-    # 如果面积大于阈值，认为是字符符号
-        
-        if 100<area<400:
-            if L1wd<300:
-                cv2.drawContours(binary_original_image, [contour], -1, (154, 255, 123), 2)
-                print(f"{L1wd}")
-                symbol_count+=1
-    print(f"Number of characters: {symbol_count}")
-    
-    # 顯示原始影片及校正後的影
-    cv2.imshow('oxxostudio',binary_original_image)
+    resized_image = cv2.resize(original_image, (688, 864))
+    cv2.imshow('oxxostudio', resized_image)
     if cv2.waitKey(0) == ord('Q'):
         break
 
+
+
 cap.release()
-cv2.destroyAllWindows() 
+cv2.destroyAllWindows()
