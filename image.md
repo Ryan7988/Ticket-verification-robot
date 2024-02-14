@@ -1,11 +1,13 @@
 import cv2
 import numpy as np
+from ultralytics import YOLO
 
 cap = cv2.VideoCapture('E:\\4_1.mp4')
-
+model = YOLO('models/v17.pt')
 if not cap.isOpened():
     print("Cannot open video file")
     exit()
+
 while True:
     # 讀取一帧
     ret, frame = cap.read()
@@ -56,7 +58,7 @@ while True:
 
     # 進行透視變換
     warped_frame = cv2.warpPerspective(frame, perspective_matrix, output_size)
-
+    print("Warped Frame Size:", warped_frame.shape)
     # 使用霍夫變換檢測直線
     edges = cv2.Canny(warped_frame, 50, 150, apertureSize=3)
     lines = cv2.HoughLines(edges, 1, np.pi / 180, threshold=100)
@@ -80,13 +82,13 @@ while True:
     top_left = (54, 156)
     bottom_right = (226, 372)
     original_image = warped_frame[top_left[1]:bottom_right[1], top_left[0]:bottom_right[0]]
-    original_image = cv2.cvtColor(original_image, cv2.COLOR_BGR2GRAY)
-    resized_image = cv2.resize(original_image, (688, 864))
-    cv2.imshow('oxxostudio', resized_image)
-    if cv2.waitKey(0) == ord('Q'):
+    resized_image = cv2.resize(original_image,(226, 372))
+    print("Warped Frame Size:", resized_image.shape)
+    results = model(resized_image)
+    annotated_frame = results[0].plot()
+    cv2.imshow('oxxostudio', annotated_frame)
+    if cv2.waitKey(0) & 0xFF == ord('Q'):
         break
-
-
 
 cap.release()
 cv2.destroyAllWindows()
